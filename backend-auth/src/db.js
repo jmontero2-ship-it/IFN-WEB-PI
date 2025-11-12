@@ -1,9 +1,13 @@
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
+import dotenv from "dotenv";
+import pkg from "pg";
 
-export async function openDb() {
-  return open({
-    filename: "./database.sqlite", // el archivo SQLite que se usará
-    driver: sqlite3.Database,
-  });
-}
+dotenv.config();
+const { Pool } = pkg;
+
+export const pool = new Pool({
+  user: process.env.PGUSER,
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: process.env.PGPORT,
+});

@@ -1,56 +1,52 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import bodyParser from "body-parser";
-import jwt from "jsonwebtoken";
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
+import pkg from "pg";
 
 dotenv.config();
+
+const { Pool } = pkg;
 const app = express();
-const SECRET = process.env.JWT_SECRET || "ifn_secret";
 
 app.use(cors());
 app.use(express.json());
-app.use(bodyParser.json());
 
-// Función para abrir base de datos
-async function openDb() {
-  return open({
-    filename: "./database.sqlite",
-    driver: sqlite3.Database,
-  });
-}
+// ✅ Conexión a PostgreSQL
+const pool = new Pool({
+  user: process.env.DB_USER || "postgres",
+  host: process.env.DB_HOST || "localhost",
+  database: process.env.DB_NAME || "ifn_db",
+  password: process.env.DB_PASSWORD || "1302",
+  port: process.env.DB_PORT || 5432,
+});
 
-// 🔐 LOGIN
+// 🧩 IMPORTA AQUÍ LAS RUTAS DEL F11
+import f11Routes from "../../backend-tasks/src/routes/f11Localizacion.routes.js";
+
+// Usa las rutas
+app.use("/api", f11Routes);
+
+// 🔐 Ruta de login
 app.post("/api/login", async (req, res) => {
-  try {
-    const { codigo_conglomerado, codigo_brigada, password } = req.body;
+  const { codigo_conglomerado, codigo_brigada, password } = req.body;
 
-    const db = await openDb();
-    const user = await db.get(
-      "SELECT * FROM usuarios WHERE codigo_conglomerado = ? AND codigo_brigada = ? AND password = ?",
+  try {
+    const result = await pool.query(
+      "SELECT * FROM usuarios WHERE codigo_conglomerado=$1 AND codigo_brigada=$2 AND contrasena=$3",
       [codigo_conglomerado, codigo_brigada, password]
     );
 
-    if (!user) {
-      return res.status(401).json({ message: "Credenciales incorrectas" });
+    if (result.rows.length > 0) {
+      return res.json({ success: true, user: result.rows[0] });
+    } else {
+      return res.status(401).json({ success: false, message: "Credenciales incorrectas" });
     }
-
-    const token = jwt.sign({ id: user.id, rol: user.rol }, SECRET, {
-      expiresIn: "8h",
-    });
-
-    res.json({
-      message: "✅ Login exitoso",
-      token,
-      rol: user.rol,
-    });
-  } catch (error) {
-    console.error("❌ Error en login:", error);
-    res.status(500).json({ message: "Error en el servidor" });
+  } catch (err) {
+    console.error("❌ Error en login:", err.message);
+    res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 });
 
+// 🖥️ Puerto del servidor
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`✅ Auth-Service corriendo en puerto ${PORT}`));
