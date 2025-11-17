@@ -16,17 +16,35 @@ router.post('/register', async (req, res) => {
   res.json({ message: 'Usuario creado correctamente' });
 });
 
-router.post('/login', async (req, res) => {
-  const db = await initDB();
-  const { username, password } = req.body;
-  const user = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({ error: 'Credenciales incorrectas' });
+  try {
+    const result = await pool.query(
+      "SELECT id, nombre, email, rol FROM usuarios WHERE email = $1 AND password = $2",
+      [email, password]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ success: false, message: "Credenciales incorrectas" });
+    }
+
+    const user = result.rows[0];
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        rol: user.rol,  // <— ESTO ES LO IMPORTANTE
+      }
+    });
+
+  } catch (error) {
+    console.error("Error en login:", error);
+    res.status(500).json({ success: false, message: "Error del servidor" });
   }
-
-  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '8h' });
-  res.json({ token, role: user.role });
 });
 
 export default router;

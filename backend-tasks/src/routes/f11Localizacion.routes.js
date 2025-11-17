@@ -25,6 +25,10 @@ router.post("/f11", async (req, res) => {
       fecha,
     ]);
 
+    await pool.query(`INSERT INTO formularios_estado (codigo_conglomerado, codigo_brigada, formulario)
+   VALUES ($1, $2, 'F11')`,
+   [conglomerado, "BRG-01"]);
+
     res.json({
       success: true,
       message: "Formulario F1.1 guardado exitosamente",
@@ -35,5 +39,8 @@ router.post("/f11", async (req, res) => {
     res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 });
+
+
+
 
 export default router;

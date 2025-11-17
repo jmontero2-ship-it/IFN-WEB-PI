@@ -32,20 +32,45 @@ app.post("/api/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT * FROM usuarios WHERE codigo_conglomerado=$1 AND codigo_brigada=$2 AND contrasena=$3",
+      `SELECT 
+        codigo_conglomerado,
+        codigo_brigada,
+        contrasena,
+        rol
+       FROM usuarios 
+       WHERE codigo_conglomerado = $1 
+       AND codigo_brigada = $2 
+       AND contrasena = $3`,
       [codigo_conglomerado, codigo_brigada, password]
     );
 
-    if (result.rows.length > 0) {
-      return res.json({ success: true, user: result.rows[0] });
-    } else {
-      return res.status(401).json({ success: false, message: "Credenciales incorrectas" });
+    if (result.rows.length === 0) {
+      return res.json({
+        success: false,
+        message: "Credenciales incorrectas",
+      });
     }
+
+    const user = result.rows[0];
+
+    return res.json({
+      success: true,
+      user: {
+        codigo_conglomerado: user.codigo_conglomerado,
+        codigo_brigada: user.codigo_brigada,
+        rol: user.rol,  // 👈 YA ESTÁ BIEN
+      },
+    });
+
   } catch (err) {
     console.error("❌ Error en login:", err.message);
-    res.status(500).json({ success: false, message: "Error interno del servidor" });
+    return res.status(500).json({
+      success: false,
+      message: "Error interno del servidor",
+    });
   }
 });
+
 
 // 🖥️ Puerto del servidor
 const PORT = process.env.PORT || 4000;
